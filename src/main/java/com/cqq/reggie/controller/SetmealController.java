@@ -13,12 +13,14 @@ import com.cqq.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("setmeal")
@@ -34,6 +36,9 @@ public class SetmealController {
     @Autowired
     private CategoryService categoryService;
 
+    @Autowired
+    private RedisTemplate redisTemplate;
+
     /**
      * 套餐分页查询
      * @param page
@@ -43,6 +48,14 @@ public class SetmealController {
      */
     @GetMapping("/page")
     public Result<Page<SetmealDto>> getPage(int page,int pageSize,String name){
+
+        String key="setMealPage_"+page+"_"+pageSize+"_"+name;
+        Page<SetmealDto> setMealPageRedis = (Page<SetmealDto>) redisTemplate.opsForValue().get(key);
+
+        if(setMealPageRedis!=null){
+            return Result.success(setMealPageRedis);
+        }
+
         Page<Setmeal> pageInfo=new Page<>(page,pageSize);
 
         LambdaQueryWrapper<Setmeal> queryWrapper=new LambdaQueryWrapper<>();
@@ -71,6 +84,9 @@ public class SetmealController {
             dtoList.add(setmealDto);
         }
         dtoPage.setRecords(dtoList);
+
+        redisTemplate.opsForValue().set(key,dtoPage);
+
         return Result.success(dtoPage);
     }
 
@@ -163,7 +179,16 @@ public class SetmealController {
 
     @GetMapping("/list")
     public Result<List<SetmealDto>> getSetmealList(Long categoryId,Integer status){
-        log.info("categoryId:{},,status:{}",categoryId,status);
+        log.info("categoryId:{},status:{}",categoryId,status);
+
+        String key="setMeal_"+categoryId+"_"+status;
+
+        List<SetmealDto> dtoListInRedis = (List<SetmealDto>) redisTemplate.opsForValue().get(key);
+
+        if(dtoListInRedis!=null){
+            return Result.success(dtoListInRedis);
+        }
+
 
         LambdaQueryWrapper<Setmeal> queryWrapper=new LambdaQueryWrapper<>();
         queryWrapper.eq(Setmeal::getCategoryId,categoryId);
@@ -182,10 +207,10 @@ public class SetmealController {
             dtoList.add(setmealDto);
         }
 
+
+        redisTemplate.opsForValue().set(key, dtoList,1, TimeUnit.HOURS);
+
         return Result.success(dtoList);
-
-
-
 
     }
 

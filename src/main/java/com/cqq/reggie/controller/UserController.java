@@ -8,16 +8,20 @@ import com.cqq.reggie.utils.ValidateCodeUtils;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 import java.util.Map;
+import java.util.concurrent.TimeUnit;
 
 @RestController
 @RequestMapping("/user")
 @Slf4j
 public class UserController {
+    @Autowired
+    private RedisTemplate redisTemplate;
 
     @Autowired
     private UserService userService;
@@ -36,9 +40,15 @@ public class UserController {
             //发送短信
 //            SMSUtils.sendMessage("瑞吉外卖", "", phone,code);
 
+
+
+            //验证码缓存到Redis中
+            redisTemplate.opsForValue().set(phone,code,5, TimeUnit.MINUTES);
+
+
             //保存验证码到Session
-            httpSession.setAttribute(phone, code);
-            log.info("phone:{},code:{}", phone, code);
+//            httpSession.setAttribute(phone, code);
+//            log.info("phone:{},code:{}", phone, code);
 
             return Result.success("手机短信发送成功!");
         }
@@ -47,7 +57,7 @@ public class UserController {
 
 
     @PostMapping("/login")
-    public Result<User> login(@RequestBody Map map, HttpSession httpSession, HttpServletRequest request) {
+    public Result<User> login(@RequestBody Map map, HttpSession httpSession) {
         log.info("map:{}", map);
 
         String phone = map.get("phone").toString();
@@ -57,10 +67,13 @@ public class UserController {
         log.info("code:{}", code);
 
 
-        Object codeInSession = httpSession.getAttribute(phone);
-        log.info("codeInSession:{}", codeInSession);
+//        Object codeInSession = httpSession.getAttribute(phone);
+//        log.info("codeInSession:{}", codeInSession);
 
-        if (codeInSession != null && codeInSession.equals(code)) {
+        String codeInRedis = (String) redisTemplate.opsForValue().get(phone);
+
+
+        if (codeInRedis != null && codeInRedis.equals(code)) {
             LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
             queryWrapper.eq(User::getPhone,phone);
             User user = userService.getOne(queryWrapper);
@@ -73,6 +86,10 @@ public class UserController {
             }
 
             httpSession.setAttribute("user", user.getId());
+
+            //如果用户登录成功，删除Redis中的验证码
+            redisTemplate.delete(phone);
+
             return Result.success(user);
         }
         return Result.error("登录失败！");
