@@ -7,17 +7,27 @@ import com.cqq.reggie.pojo.Setmeal;
 import com.cqq.reggie.service.DishService;
 import com.cqq.reggie.service.SetmealService;
 import org.junit.jupiter.api.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.HashOperations;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.test.context.junit4.SpringRunner;
 
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 @SpringBootTest
+//@RunWith(SpringRunner.class)
 public class MyTest {
+    @Autowired
+    private RedisTemplate redisTemplate;
+
     @Value("${reggie.path}")
     private String basePath;
 
@@ -135,5 +145,47 @@ public class MyTest {
         fileOutputStream.close();
     }
 
+    @Test
+    public void testRedis(){
+        ValueOperations valueOperations = redisTemplate.opsForValue();
+//        valueOperations.set("city", "hangzhou");
+        Integer append = redisTemplate.opsForValue().append("city", "222");
 
+//        redisTemplate.delete("city");
+        System.out.println(append);
+        System.out.println(redisTemplate.opsForValue().get("city"));
+//        Object city = redisTemplate.opsForValue().get("city");
+//        System.out.println(city);
+
+    }
+
+    @Test
+    public void testHash(){
+        HashOperations hashOperations = redisTemplate.opsForHash();
+//        hashOperations.put("hashName", "hashKeyName", "hashValue");
+        hashOperations.put("hashName", "hashKeyName2", "hashValue2");
+        hashOperations.put("hashName", "hashKeyName3", "hashValue3");
+
+//        Object o = hashOperations.get("hashName", "hashKeyName");
+//        System.out.println(o);
+        Set keys = hashOperations.keys("hashName");
+        for (Object key : keys) {
+            System.out.println(key);
+        }
+        List values = hashOperations.values("hashName");
+        for (Object value : values) {
+            System.out.println(value);
+        }
+
+    }
+
+    @Test
+    public void testKeys(){
+        Set keys = redisTemplate.keys("*");
+        for (Object key : keys) {
+            System.out.println(key);
+        }
+
+
+    }
 }
