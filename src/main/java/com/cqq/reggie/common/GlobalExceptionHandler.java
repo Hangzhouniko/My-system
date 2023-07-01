@@ -2,6 +2,7 @@ package com.cqq.reggie.common;
 
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.converter.HttpMessageNotWritableException;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -42,5 +43,12 @@ public class GlobalExceptionHandler {
 
         return Result.error(ex.getMessage());
     }
+
+//    @ExceptionHandler({HttpMessageNotWritableException.class,IllegalStateException.class})
+//    public Result<String> imageExceptionHandler(CustomException ex){
+////        log.error(ex.getMessage());
+//
+//        return Result.error(ex.getMessage());
+//    }
 
 }

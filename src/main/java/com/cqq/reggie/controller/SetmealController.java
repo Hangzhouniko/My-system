@@ -13,6 +13,8 @@ import com.cqq.reggie.service.SetmealService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -36,8 +38,8 @@ public class SetmealController {
     @Autowired
     private CategoryService categoryService;
 
-    @Autowired
-    private RedisTemplate redisTemplate;
+//    @Autowired
+//    private RedisTemplate redisTemplate;
 
     /**
      * 套餐分页查询
@@ -47,15 +49,16 @@ public class SetmealController {
      * @return
      */
     @GetMapping("/page")
+    @Cacheable(value = "setmealCache",key = "'page_'+#page+'_'+#pageSize+'_'+#name",unless = "#result==null")
     public Result<Page<SetmealDto>> getPage(int page,int pageSize,String name){
 
-        String key="setMealPage_"+page+"_"+pageSize+"_"+name;
+      /*  String key="setMealPage_"+page+"_"+pageSize+"_"+name;
         Page<SetmealDto> setMealPageRedis = (Page<SetmealDto>) redisTemplate.opsForValue().get(key);
 
         if(setMealPageRedis!=null){
             return Result.success(setMealPageRedis);
         }
-
+*/
         Page<Setmeal> pageInfo=new Page<>(page,pageSize);
 
         LambdaQueryWrapper<Setmeal> queryWrapper=new LambdaQueryWrapper<>();
@@ -85,7 +88,7 @@ public class SetmealController {
         }
         dtoPage.setRecords(dtoList);
 
-        redisTemplate.opsForValue().set(key,dtoPage);
+//        redisTemplate.opsForValue().set(key,dtoPage);
 
         return Result.success(dtoPage);
     }
@@ -97,6 +100,7 @@ public class SetmealController {
      * @return
      */
     @PostMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public Result<String> save(@RequestBody SetmealDto setMealDto){
         log.info("!!@@@@@@@@@@@@@参数setMealDto：{}",setMealDto);
 
@@ -113,6 +117,7 @@ public class SetmealController {
      * @return
      */
     @PostMapping("/status/{status}")
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public Result<String> saveStatus(@PathVariable("status") Integer status,long[] ids){
             for (long id : ids) {
                 Setmeal setmeal = setmealService.getById(id);
@@ -156,6 +161,7 @@ public class SetmealController {
      * @return
      */
     @PutMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public Result<String> update(@RequestBody SetmealDto setmealDto){
         setmealService.updateWithDish(setmealDto);
 
@@ -169,6 +175,7 @@ public class SetmealController {
      * @return
      */
     @DeleteMapping
+    @CacheEvict(value = "setmealCache",allEntries = true)
     public Result<String> deleteById(long[] ids){
         log.info("========>ids:{}",ids);
         setmealService.deleteWithDish(ids);
@@ -178,16 +185,17 @@ public class SetmealController {
 
 
     @GetMapping("/list")
+    @Cacheable(value = "setmealCache",key = "'list_'+#categoryId+'_'+#status",unless ="#result==null")
     public Result<List<SetmealDto>> getSetmealList(Long categoryId,Integer status){
         log.info("categoryId:{},status:{}",categoryId,status);
 
-        String key="setMeal_"+categoryId+"_"+status;
+ /*       String key="setMeal_"+categoryId+"_"+status;
 
         List<SetmealDto> dtoListInRedis = (List<SetmealDto>) redisTemplate.opsForValue().get(key);
 
         if(dtoListInRedis!=null){
             return Result.success(dtoListInRedis);
-        }
+        }*/
 
 
         LambdaQueryWrapper<Setmeal> queryWrapper=new LambdaQueryWrapper<>();
@@ -208,7 +216,7 @@ public class SetmealController {
         }
 
 
-        redisTemplate.opsForValue().set(key, dtoList,1, TimeUnit.HOURS);
+//        redisTemplate.opsForValue().set(key, dtoList,1, TimeUnit.HOURS);
 
         return Result.success(dtoList);
 

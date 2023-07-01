@@ -15,6 +15,8 @@ import com.cqq.reggie.service.DishService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.web.bind.annotation.*;
 
@@ -51,14 +53,15 @@ public class DishController {
      * @return
      */
     @GetMapping("/page")
+    @Cacheable(value = "dishCache", key = "'page_'+#page+'_'+#pageSize+'_'+#name", unless = "#result==null")
     public Result<Page<DishDto>> getPage(int page, int pageSize, String name) {
         log.info("！！！参数page:{},pageSize:{},name:{}", page, pageSize, name);
 
-        String key ="dishPage_"+page+"_"+pageSize+"_"+name;
+        /*String key ="dishPage_"+page+"_"+pageSize+"_"+name;
         Page<DishDto> dishPageRedis = (Page<DishDto>) redisTemplate.opsForValue().get(key);
         if(dishPageRedis!=null){
             return Result.success(dishPageRedis);
-        }
+        }*/
 
 
         Page<Dish> pageInfo = new Page<>(page, pageSize);
@@ -92,7 +95,7 @@ public class DishController {
         }
         dtoPage.setRecords(dtoList);
 
-        redisTemplate.opsForValue().set(key, dtoPage,1,TimeUnit.HOURS);
+//        redisTemplate.opsForValue().set(key, dtoPage,1,TimeUnit.HOURS);
 
 
         return Result.success(dtoPage);
@@ -103,6 +106,7 @@ public class DishController {
      * 菜品信息
      */
     @GetMapping("/{id}")
+    @Cacheable(value = "dishCache", key = "'dishDto_'+#id", unless = "#result==null")
     public Result<DishDto> getOne(@PathVariable("id") Long id) {
         log.info("!!!查询菜品的id：{}", id);
         Dish dish = dishService.getById(id);
@@ -136,21 +140,21 @@ public class DishController {
      * @param dish
      * @return
      */
+    @Cacheable(value = "dishCache", key = "'list_'+#dish.id", unless = "#result==null")
     @GetMapping("/list")
     public Result<List<DishDto>> getCategory(Dish dish) {
-        List<DishDto> dtoList =null;
+        List<DishDto> dtoList = null;
 
-        String key="dish_"+dish.getCategoryId()+"_"+dish.getStatus();
-        log.info("key:{}",key);
+//        String key="dish_"+dish.getCategoryId()+"_"+dish.getStatus();
+//        log.info("key:{}",key);
+//        dtoList = (List<DishDto>)redisTemplate.opsForValue().get(key);
 
-        dtoList = (List<DishDto>)redisTemplate.opsForValue().get(key);
-
-        if(dtoList!=null){
-            return Result.success(dtoList);
-        }
+//        if(dtoList!=null){
+//            return Result.success(dtoList);
+//        }
 
 
-        dtoList =new ArrayList<>();
+        dtoList = new ArrayList<>();
         LambdaQueryWrapper<Dish> queryWrapper = new LambdaQueryWrapper();
 
         queryWrapper.eq(dish.getCategoryId() != null,
@@ -178,7 +182,7 @@ public class DishController {
             dtoList.add(dishDto);
         }
 
-        redisTemplate.opsForValue().set(key, dtoList,60, TimeUnit.MINUTES);
+//        redisTemplate.opsForValue().set(key, dtoList,60, TimeUnit.MINUTES);
 
 
         return Result.success(dtoList);
@@ -192,11 +196,12 @@ public class DishController {
      * @return
      */
     @PostMapping
+    @CacheEvict(value = "dishCache",allEntries = true)
     public Result<String> save(@RequestBody DishDto dishDto) {
         log.info("!!!!dishDto参数获取：{}", dishDto.toString());
         dishService.saveWithFlavors(dishDto);
 
-        String key ="dish_"+dishDto.getCategoryId()+"_1";
+        String key = "dish_" + dishDto.getCategoryId() + "_1";
         redisTemplate.delete(key);
 
         return Result.success("添加成功！");
@@ -210,13 +215,14 @@ public class DishController {
      * @return
      */
     @PutMapping
+    @CacheEvict(value = "dishCache", allEntries = true)
     public Result<String> updateOne(@RequestBody DishDto dishDto) {
         log.info("菜品信息修改为：{}", dishDto.toString());
         dishService.updateWithFlavors(dishDto);
 
 //        Set keys = redisTemplate.keys("dish_*");
 //        redisTemplate.delete(keys);
-        String key ="dish_"+dishDto.getCategoryId()+"_1";
+        String key = "dish_" + dishDto.getCategoryId() + "_1";
         redisTemplate.delete(key);
 
 
@@ -231,6 +237,7 @@ public class DishController {
      * @param ids
      * @return
      */
+    @CacheEvict(value = "dishCache", allEntries = true)
     @PostMapping("/status/{status}")
     public Result<String> status(@PathVariable("status") Integer status, Long[] ids) {
         log.info("@@@@!!!====>status:{}.......ids:{}", status, ids);
@@ -255,6 +262,7 @@ public class DishController {
      * @return
      */
     @DeleteMapping
+    @CacheEvict(value = "dishCache", allEntries = true)
     public Result<String> deleteDish(Long[] ids) {
         log.info("!!@@@@@=====> ids:{}", ids.toString());
 

@@ -8,6 +8,8 @@ import com.cqq.reggie.pojo.AddressBook;
 import com.cqq.reggie.service.AddressBookService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
@@ -20,11 +22,15 @@ public class AddressBookController {
     @Autowired
     private AddressBookService addressBookService;
 
+//    @Autowired
+//    private CacheManager cacheManager;
+
     /**
      * 获取地址列表
      * @param httpSession
      * @return
      */
+    @Cacheable(value = "addressBookCache", key ="#httpSession.getAttribute('user')",unless="#result==null")
     @GetMapping("/list")
     public Result<List<AddressBook>> getList(HttpSession httpSession){
         long userId = (long) httpSession.getAttribute("user");

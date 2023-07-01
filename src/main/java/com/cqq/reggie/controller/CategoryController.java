@@ -5,10 +5,10 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.cqq.reggie.common.Result;
 import com.cqq.reggie.pojo.Category;
 import com.cqq.reggie.service.CategoryService;
-import io.swagger.models.auth.In;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -28,6 +28,7 @@ public class CategoryController {
      * @return
      */
     @GetMapping("/page")
+    @Cacheable(value = "categoryCache",key = "'page_'+#page+#pageSize",unless = "#result==null")
     public Result<Page> getPage(Integer page, Integer pageSize) {
 
         log.info("page:{},pageSize:{}", page, pageSize);
@@ -48,6 +49,7 @@ public class CategoryController {
      * @return
      */
     @PostMapping
+    @CacheEvict(value = "categoryCache",allEntries = true)
     public Result<String> insertCategory(@RequestBody Category category) {
 //        Category category1 = new Category();
 
@@ -72,6 +74,7 @@ public class CategoryController {
      * @return
      */
     @DeleteMapping
+    @CacheEvict(value = "categoryCache",allEntries = true)
     public Result<String> deleteCategory(long id) {
         log.info("@!@@!!!!获得需要删除的菜品id：{}", id);
         categoryService.remove(id);
@@ -87,6 +90,7 @@ public class CategoryController {
      * @return
      */
     @PutMapping
+    @CacheEvict(value = "categoryCache",allEntries = true)
     public Result<String> updateCategory(@RequestBody Category category) {
         log.info("！！！！需要修改的分类信息:{}", category.toString());
 //        LambdaUpdateWrapper<Category> updateWrapper = new LambdaUpdateWrapper<>();
@@ -105,6 +109,7 @@ public class CategoryController {
      * @return
      */
     @GetMapping("/list")
+    @Cacheable(value = "categoryCache",key = "'list_'+#type")
     public Result<List<Category>> getOne(Integer type) {
         log.info("查询分类的列表：{}", type);
 

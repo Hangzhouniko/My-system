@@ -4,7 +4,6 @@ package com.cqq.reggie.controller;
 import com.cqq.reggie.common.Result;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -61,10 +60,10 @@ public class CommonController {
     /**
      * 文件下载
      * @param name
-     * @param response
+     * @param httpServletResponse
      * @return
      */
-    @GetMapping("/download")
+   /* @GetMapping("/download")
     public Result<String> download(String name, HttpServletResponse response){
         try {
             //输入流，通过输入流读取文件内容
@@ -90,5 +89,38 @@ public class CommonController {
             e.printStackTrace();
         }
         return Result.success("文件下载成功！");
+    }
+*/
+
+    @GetMapping("/download")
+    public void fileDownload(HttpServletResponse httpServletResponse,String name) throws IOException {
+        //把刚刚存的文件读取到内存中，准备回显
+        FileInputStream fileInputStream = new FileInputStream(new File(basePath+name));
+
+        //把读取到内存中的图片用输出流写入Servlet响应对象里
+        ServletOutputStream servletOutputStream = httpServletResponse.getOutputStream();
+
+        //可选项，选择响应类型
+        httpServletResponse.setContentType("image/jpeg");
+
+        //用byte数组写入，注意是小写b，不是大写，大写就是包装类了
+        byte[] fileArray = new byte[1024];
+        int length=0;
+        try {
+            //只要没读到数组的尾部就一直读下去，这部分是IO的内容
+            while ((length=fileInputStream.read(fileArray))!=-1) {
+                //写入响应流，从0开始，写入到数组末尾长度
+                servletOutputStream.write(fileArray, 0, length);
+                //把流里的东西挤出来
+                servletOutputStream.flush();
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            //关闭流
+            fileInputStream.close();
+            servletOutputStream.close();
+        }
+        return;
     }
 }
